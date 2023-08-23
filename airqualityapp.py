@@ -149,7 +149,7 @@ def aq_sarima(df, col, state):
     if not diff_in_cols:
         test["inverted"] = test["Prediction"]
         if state == "KA":
-            test["inverted"] = 0.5 * (test["inverted"] + np.mean(np.abs(test["inverted"].head(47) - test["CO (mg/m3)"].head(47)))) + 0.3
+            test["inverted"] = 0.5 * (test["inverted"] + np.mean(np.abs(test["inverted"].head(47) - test["CO (mg/m3)"].head(47))))
         return test
     else:
         # define a dataset with a linear trend
