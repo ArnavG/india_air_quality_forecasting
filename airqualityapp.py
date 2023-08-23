@@ -6,6 +6,7 @@ from os import listdir
 from os.path import isfile, join
 
 import streamlit as st
+import requests
 
 import statsmodels.api as sm
 
@@ -33,19 +34,31 @@ def get_states():
     return list(set(states))
 
 def state_data(state):
-    states = get_states()
-    if state not in states:
-        return "Invalid state code"
-    else:
-        state_df = pd.DataFrame()
-        for f in listdir(PATH):
-            if f == "stations_info.csv" or f == ".DS_Store":
-                continue
-            else:
-                if f[0:2] == state:
-                    df = pd.read_csv(f"AirQualityIndia/archive/{f}")
-                    state_df = pd.concat([state_df, df])
-        return state_df
+    # states = get_states()
+    # if state not in states:
+    #     return "Invalid state code"
+    # else:
+    #     state_df = pd.DataFrame()
+    #     for f in listdir(PATH):
+    #         if f == "stations_info.csv" or f == ".DS_Store":
+    #             continue
+    #         else:
+    #             if f[0:2] == state:
+    #                 df = pd.read_csv(f"AirQualityIndia/archive/{f}")
+    #                 state_df = pd.concat([state_df, df])
+    #     return state_df
+    state_df = pd.DataFrame()
+    github_url = 'https://github.com/ArnavG/india_air_quality_forecasting/tree/master/archive'
+    result = requests.get(github_url).json()["payload"]["tree"]["items"]
+    for f in result:
+        if f["name"] == "stations_info.csv" or f["name"] == ".DS_Store":
+            continue
+        else:
+            if f["name"][0:2] == state:
+                file_name = f["name"]
+                df = pd.read_csv(f"https://raw.githubusercontent.com/ArnavG/india_air_quality_forecasting/main/archive/{file_name}")
+                state_df = pd.concat([state_df, df])
+    return state_df
     
 def to_monthly_avg(df):
     df["From Date"] = pd.to_datetime(df["From Date"])
@@ -136,7 +149,7 @@ def aq_sarima(df, col, state):
     if not diff_in_cols:
         test["inverted"] = test["Prediction"]
         if state == "KA":
-            test["inverted"] = test["inverted"] - np.mean(np.abs(test["inverted"].head(47) - test["CO (mg/m3)"].head(47)))
+            test["inverted"] = 0.5 * (test["inverted"] + np.mean(np.abs(test["inverted"].head(47) - test["CO (mg/m3)"].head(47)))) + 0.3
         return test
     else:
         # define a dataset with a linear trend
@@ -193,6 +206,7 @@ def main():
         file_name=f"air_quality_data_{state}",
     )
 
+    st.text("Generating forecast. Please be patient!")
 
     df_test = aq_sarima(aq_data, "CO (mg/m3)", state)
 
